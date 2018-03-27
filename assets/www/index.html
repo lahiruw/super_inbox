@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<html>
+    <head>
+
+
+        <script type="text/javascript" src="lib/touch/sencha-touch-all.js"></script>
+        <link href="lib/touch/resources/css/sencha-touch.css" rel="stylesheet" type="text/css" />
+        <script type="text/javascript" src="cordova-2.4.0.js"></script>
+        <script type="text/javascript" src="json2.js"></script>
+		<script type="text/javascript" src="jquery.min.js"></script>
+        <script type="text/javascript" src="app/app.js"></script>
+		<script type="text/javascript" src="jstorage.js"></script>
+        <script type="text/javascript">
+        
+            document.addEventListener("deviceready", function () {
+            	console.log("deviceready....");
+            	navigator.splashscreen.show();
+            	
+            }, false);
+        </script>
+        <script type="text/javascript">
+      //services and functions 
+        function getUniqueKeyMessage(planeDid,messageDid){
+        	var key = ''+planeDid+'_'+messageDid;
+        	return key;
+        }	
+
+
+        function saveObject(key, value) {           
+            if (Ext.typeOf(value) == 'object') {
+                $.jStorage.set(key, Ext.JSON.encode(value));
+        		//localStorage.setItem(key,Ext.JSON.encode(value));
+            }           
+        }
+
+        function saveString(key, value) {
+                $.jStorage.set(key, value);
+        }
+
+        function getObject(key) {
+
+            var value = $.jStorage.get(key);
+
+            if (Ext.typeOf(value) == 'string') {
+                return Ext.JSON.decode(value);
+            }
+        }
+
+        function getString(key) {
+            
+            var value = $.jStorage.get(key);
+
+            if (Ext.typeOf(value) == 'string') {
+                return value;
+            }
+        }
+
+        function deleteObject(key) { //Key must be String
+        	if (Ext.typeOf(key) == 'string') {
+        		$.jStorage.deleteKey(key);
+        	}
+        }
+
+        var Plane = (function () {
+
+        	  var instance;
+
+        	  function init() {
+        	    // Private methods and variables
+        	    return {
+        		// public methods and variables
+        		 planeDid:'',
+        		 totalCountInPlane:''
+        	    };
+
+        	  };
+
+        	  return {
+
+        	    getInstance: function () {
+        	        instance = init();
+        	      return instance;
+        	    }
+
+        	  };
+
+        	})(); 
+
+        var Category = (function () {
+
+        	  var instance;
+
+        	  function init() {
+        	    // Private methods and variables
+        	    return {
+        		// public methods and variables
+        		 categoryDid:'',
+        		 planeDid:'',
+        		 totalCountInCategory:'',
+        	 messageCountInCategory:''
+        	    };
+
+        	  };
+
+        	  return {
+
+        	    getInstance: function () {
+        	        instance = init();
+        	      return instance;
+        	    }
+
+        	  };
+
+        	})();        
+
+        var Word = (function () {
+
+        	  var instance;
+
+        	  function init() {
+        	    // Private methods and variables
+        	    return {
+        		// public methods and variables
+        		 word:'',
+        		 categoryDid:'',
+        		 planeDid:'',
+        		 wordCountInCategory:''
+        	    };
+
+        	  };
+
+        	  return {
+
+        	    getInstance: function () {
+        	        instance = init();
+        	      return instance;
+        	    }
+
+        	  };
+
+        	})(); 
+
+        var Message = (function () {
+
+        	  var instance;
+
+        	  function init() {
+        	    // Private methods and variables
+        	    return {
+        		// public methods and variables
+        		 messageDID:'',
+        		 planeDID:'',
+        		 categoryDID:'',
+        		 isTrained:''
+        	    };
+
+        	  };
+
+        	  return {
+
+        	    getInstance: function () {
+        	        instance = init();
+        	      return instance;
+        	    }
+
+        	  };
+
+        	})();  	        
+        							
+        function updateOrSavePlaneMessageCount(planeDid,messageCount){
+        	//get existing plane on LS 
+        	var plane = getObject(planeDid);
+        	if(plane != null && parseInt(plane.planeDid,10) > 0 ){
+        		var currentCount = plane.totalCountInPlane;
+        		plane.totalCountInPlane = currentCount + messageCount;
+        		saveObject(planeDid,plane);
+        	}else{
+        		var plane = Plane.getInstance();
+        			plane.planeDid = planeDid;
+        			plane.totalCountInPlane = messageCount;
+        			saveObject(planeDid,plane);
+        	}
+        }
+
+        function updateOrSaveCategoryWordCount(categoryKey,wordCount){
+        	
+        	var category  =  getObject(categoryKey);
+
+
+        	if(category != null && parseInt(category.categoryDid,10) > 0 ){
+        		var currentCount =  category.totalCountInCategory;
+
+        		var newCount = (parseInt(currentCount,10) + parseInt(wordCount,10)) ;
+        		category.totalCountInCategory = newCount;
+        		saveObject(categoryKey,category);
+        	}else{
+        	//new category 
+        	//alert('new category : ');
+        		var category = Category.getInstance();
+        		var tokenArray = getTokenArray(categoryKey,'_');
+        			category.categoryDid = tokenArray[1];
+        			category.planeDid = tokenArray[0];
+        			category.totalCountInCategory =  wordCount;
+        			//alert('category.totalCountInCategory <<< '+category.totalCountInCategory);
+        			saveObject(categoryKey,category);
+        	}
+        }
+
+        function updateOrSaveCategoryMessageCount(categoryKey,messageCount){
+            var category  =  getObject(categoryKey);
+        	if(category != null && parseInt(category.categoryDid,10) > 0 ){
+        		var currentCount =  category.messageCountInCategory;
+        		category.messageCountInCategory = currentCount + messageCount;
+        		saveObject(categoryKey,category);
+        	}else{
+        	//new category 
+        		var category = Category.getInstance();
+        		var tokenArray = getTokenArray(categoryKey,'_');
+        			category.categoryDid = tokenArray[1];
+        			category.planeDid = tokenArray[0];
+        			category.messageCountInCategory =  messageCount;
+        			category.totalCountInCategory = 0;
+        			saveObject(categoryKey,category);
+        	}
+        }
+
+        function updateOrSaveWordCount(wordKey,wordCount){
+        	
+        	var word = getObject(wordKey);
+        	
+        	if(word != null && parseInt(word.categoryDid,10) > 0){
+        		var currentCount = word.wordCountInCategory;
+        		word.wordCountInCategory = currentCount + wordCount;
+        		saveObject(wordKey,word);
+        	}else{
+        	//new word category
+        		var tokenArray = getTokenArray(wordKey,'_');
+        		var word = Word.getInstance();
+        			word.word = tokenArray[2];
+        			word.categoryDid = tokenArray[1]; 
+        			word.planeDid = tokenArray[0]; 
+        			word.wordCountInCategory = wordCount; 
+        		saveObject(wordKey,word);
+        	}
+        	
+        }
+
+        function updateOrSaveMessageState(messageKey,isTrained,categoryDid){
+             var message = getObject(messageKey);
+        	
+           	if(message != null && parseInt(message.messageDID,10) > 0){
+           		message.isTrained = isTrained;
+           		saveObject(messageKey,message);
+           	}else{
+        		//new message
+        			var tokenArray = getTokenArray(messageKey,'_');
+        			var message = Message.getInstance();
+        				message.planeDID = tokenArray[0];
+        				message.messageDID = tokenArray[1]; 
+        				message.isTrained = isTrained; 
+        				message.categoryDID = categoryDid; 
+        			saveObject(messageKey,message);
+        		}
+        }
+
+        function getTokenArray(text,splitter){
+        	var tokenArray = text.split(splitter);
+        	return tokenArray;
+        }
+
+        function getUniqueKeyForWord(planeDid,categoryDid,word){
+//        	alert('word ' + word);
+        	var key = ''+planeDid+'_'+categoryDid+'_'+word;
+        	return key;
+        }
+
+        function getUniqueKeyForCategory(planeDid,categoryDid){
+        	var key = ''+planeDid+'_'+categoryDid;
+        	return key;
+        }
+
+        function getCategory(planeDid,categoryArray,messageId,text){
+        	
+        	//console.log("=====================================================================");        	
+        	//console.log("Message : "+text);
+        	//console.log("Message Length : "+text.length );
+        	
+        	var start = new Date().getMilliseconds();
+        	
+        	var currentPlane = getObject(planeDid);
+        	if(typeof currentPlane === "undefined"){return null;}
+        	
+        	var totalMessageInPlane = currentPlane.totalCountInPlane;
+        	var maxProbablity = 0.00;
+        	var currentCategiryDID = 0;
+//        	alert('categoryArray.length ' + categoryArray.length);
+        	for(var i=0;i<categoryArray.length;i++ ){
+        		//alert('categoryArray[i]  '+categoryArray[i]); 1
+        		var categoryKey = getUniqueKeyForCategory(planeDid,categoryArray[i]);
+        		var currentCategory = getObject(categoryKey);
+
+        		if(typeof currentCategory === "undefined"){continue;}else{}
+        		var totalMessageCountInCategory = currentCategory.messageCountInCategory;
+        		//probabity of message falls on to this category
+        		//alert('totalMessageCountInCategory  '+totalMessageCountInCategory); 2
+        		//alert('totalMessageInPlane  '+totalMessageInPlane);  4
+        		var p = (totalMessageCountInCategory/totalMessageInPlane); 
+        		
+        		var tokenArray = getTokenArray(text," ");
+
+        		if(tokenArray != null && tokenArray.length > 0){
+        			
+        			var messageProbablityInClassX = 1.0;
+        			var inClass = 1.0;
+
+        			for(var j=0;j<tokenArray.length;j++){
+        				var p1 = 0.0001;
+        				var wordCategoryKey = getUniqueKeyForWord(planeDid,categoryArray[i],tokenArray[j]);
+        				//alert('wordCategoryKey  '+wordCategoryKey);
+        				var wordCategory =  getObject(wordCategoryKey);
+        				if(typeof wordCategory === "undefined"){}
+        				else{
+        				// p1 = accourance of this word in the category / total words in the category
+        				//alert('wordCategory.wordCountInCategory  '+wordCategory.wordCountInCategory);
+        				//alert('currentCategory.totalCountInCategory  '+currentCategory.totalCountInCategory);
+        				p1 = (wordCategory.wordCountInCategory/currentCategory.totalCountInCategory);
+        				}
+        				
+        				//alert(' p1 '+p1);
+        				//alert('inClass '+inClass);
+        				inClass = (inClass * p1);
+        				//alert('inClass '+inClass);
+        			}
+        			
+        			messageProbablityInClassX = inClass * p;
+        			//alert('messageProbablityInClassX  '+messageProbablityInClassX);
+        			//alert('maxProbablity  '+maxProbablity);
+        			if ((messageProbablityInClassX - maxProbablity) > 0 ) {
+        				maxProbablity = messageProbablityInClassX;
+        				currentCategiryDID = categoryArray[i];
+        			}
+        			
+        		}else{ continue; }
+        	}
+        	
+        	//update SMS state table with new category
+        	
+  /*       	var arr = [] , loopCount = 5000;
+            for (var i=0 ; i <loopCount; i++){
+                arr.push(Math.random() * 50000);
+            } */
+        	
+        	var end = new Date().getMilliseconds();
+var time = end - start;
+//console.log('Execution time: ' + time);
+
+//console.log("=====================================================================");
+        	return currentCategiryDID;
+        }
+        
+        </script>
+    </head><body></body>
+</html>
